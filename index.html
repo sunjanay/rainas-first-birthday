@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Raina's First Birthday</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #fdf6f0;
+      color: #4a3728;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    header {
+      background: linear-gradient(135deg, #f8c8a8, #f4a7bb);
+      padding: 2rem 1rem;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    header p {
+      color: rgba(255,255,255,0.9);
+      margin-top: 0.3rem;
+      font-size: 0.95rem;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 0.8rem;
+    }
+
+    .toolbar button {
+      background: rgba(255,255,255,0.3);
+      border: none;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: background 0.2s;
+    }
+
+    .toolbar button:hover {
+      background: rgba(255,255,255,0.5);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(1, 1fr);
+      gap: 4px;
+      padding: 4px;
+      padding-bottom: 100px;
+    }
+
+    @media (min-width: 480px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (min-width: 768px) {
+      .grid { grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 6px; }
+    }
+
+    @media (min-width: 1100px) {
+      .grid { grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 8px; }
+    }
+
+    .photo-wrapper {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+      cursor: pointer;
+      border-radius: 4px;
+      border: 3px solid transparent;
+      transition: border-color 0.15s;
+    }
+
+    .photo-wrapper.selected {
+      border-color: #f4a7bb;
+    }
+
+    .photo-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.2s;
+    }
+
+    .photo-wrapper:active img {
+      transform: scale(0.97);
+    }
+
+    .checkmark {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.5);
+      border: 2px solid rgba(255,255,255,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      pointer-events: none;
+    }
+
+    .photo-wrapper.selected .checkmark {
+      background: #f4a7bb;
+      border-color: #fff;
+    }
+
+    .checkmark svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: #fff;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .photo-wrapper.selected .checkmark svg {
+      opacity: 1;
+    }
+
+    .expand-btn {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.4);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .photo-wrapper:hover .expand-btn {
+      opacity: 1;
+    }
+
+    @media (hover: none) {
+      .expand-btn { opacity: 1; }
+    }
+
+    .expand-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: #fff;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Bottom bar */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-top: 1px solid #eee;
+      padding: 0.8rem 1rem;
+      padding-bottom: calc(0.8rem + env(safe-area-inset-bottom, 0px));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 200;
+      transform: translateY(100%);
+      transition: transform 0.25s ease;
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+    }
+
+    .bottom-bar.visible {
+      transform: translateY(0);
+    }
+
+    .bottom-bar .count {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #4a3728;
+    }
+
+    .bottom-bar .download-btn {
+      background: linear-gradient(135deg, #f8c8a8, #f4a7bb);
+      color: #fff;
+      border: none;
+      padding: 0.7rem 1.5rem;
+      border-radius: 2rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: opacity 0.2s;
+    }
+
+    .bottom-bar .download-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .bottom-bar .download-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Lightbox */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.95);
+      z-index: 300;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lightbox.open {
+      display: flex;
+    }
+
+    .lightbox img {
+      max-width: 95vw;
+      max-height: 80vh;
+      object-fit: contain;
+      border-radius: 4px;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .lightbox-close svg {
+      width: 22px;
+      height: 22px;
+      stroke: #fff;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+    }
+
+    .lightbox-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lightbox-nav.prev { left: 10px; }
+    .lightbox-nav.next { right: 10px; }
+
+    .lightbox-nav svg {
+      width: 24px;
+      height: 24px;
+      stroke: #fff;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .lightbox-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 1rem;
+      padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .lightbox-bottom button {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 2rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .lightbox-bottom button.is-selected {
+      background: #f4a7bb;
+    }
+
+    .lightbox-counter {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      color: rgba(255,255,255,0.7);
+      font-size: 0.85rem;
+    }
+
+    /* Loading spinner for photos */
+    .photo-wrapper.loading {
+      background: #f0e6de;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Raina's First Birthday</h1>
+  <p>Tap to select, then download your favorites</p>
+  <div class="toolbar">
+    <button id="selectAllBtn" onclick="toggleSelectAll()">Select All</button>
+  </div>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<div class="bottom-bar" id="bottomBar">
+  <span class="count" id="countLabel">0 selected</span>
+  <button class="download-btn" id="downloadBtn" onclick="downloadSelected()">
+    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Download
+  </button>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <span class="lightbox-counter" id="lightboxCounter"></span>
+  <button class="lightbox-close" onclick="closeLightbox()">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <button class="lightbox-nav prev" onclick="lightboxNav(-1)">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <img id="lightboxImg" src="" alt="">
+  <button class="lightbox-nav next" onclick="lightboxNav(1)">
+    <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <div class="lightbox-bottom">
+    <button id="lightboxSelectBtn" onclick="toggleLightboxSelect()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <span id="lightboxSelectLabel">Select</span>
+    </button>
+  </div>
+</div>
+
+<script>
+const photos = ["Rainas-Birthday-001.jpg","Rainas-Birthday-002.jpg","Rainas-Birthday-003.jpg","Rainas-Birthday-004.jpg","Rainas-Birthday-005.jpg","Rainas-Birthday-006.jpg","Rainas-Birthday-007.jpg","Rainas-Birthday-008.jpg","Rainas-Birthday-009.jpg","Rainas-Birthday-010.jpg","Rainas-Birthday-011.jpg","Rainas-Birthday-012.jpg","Rainas-Birthday-013.jpg","Rainas-Birthday-014.jpg","Rainas-Birthday-015.jpg","Rainas-Birthday-016.jpg","Rainas-Birthday-017.jpg","Rainas-Birthday-018.jpg","Rainas-Birthday-019.jpg","Rainas-Birthday-020.jpg","Rainas-Birthday-021.jpg","Rainas-Birthday-022.jpg","Rainas-Birthday-023.jpg","Rainas-Birthday-024.jpg","Rainas-Birthday-025.jpg","Rainas-Birthday-026.jpg","Rainas-Birthday-027.jpg","Rainas-Birthday-028.jpg","Rainas-Birthday-029.jpg","Rainas-Birthday-030.jpg","Rainas-Birthday-031.jpg","Rainas-Birthday-032.jpg","Rainas-Birthday-033.jpg","Rainas-Birthday-034.jpg","Rainas-Birthday-035.jpg","Rainas-Birthday-036.jpg","Rainas-Birthday-037.jpg","Rainas-Birthday-038.jpg","Rainas-Birthday-039.jpg","Rainas-Birthday-040.jpg","Rainas-Birthday-041.jpg","Rainas-Birthday-042.jpg","Rainas-Birthday-043.jpg","Rainas-Birthday-044.jpg","Rainas-Birthday-045.jpg","Rainas-Birthday-046.jpg","Rainas-Birthday-047.jpg","Rainas-Birthday-048.jpg","Rainas-Birthday-049.jpg","Rainas-Birthday-050.jpg","Rainas-Birthday-051.jpg","Rainas-Birthday-052.jpg","Rainas-Birthday-053.jpg","Rainas-Birthday-054.jpg","Rainas-Birthday-055.jpg","Rainas-Birthday-056.jpg","Rainas-Birthday-057.jpg","Rainas-Birthday-058.jpg","Rainas-Birthday-059.jpg","Rainas-Birthday-060.jpg","Rainas-Birthday-061.jpg","Rainas-Birthday-062.jpg","Rainas-Birthday-063.jpg","Rainas-Birthday-064.jpg","Rainas-Birthday-065.jpg","Rainas-Birthday-066.jpg","Rainas-Birthday-067.jpg","Rainas-Birthday-068.jpg","Rainas-Birthday-069.jpg","Rainas-Birthday-070.jpg","Rainas-Birthday-071.jpg","Rainas-Birthday-072.jpg","Rainas-Birthday-073.jpg","Rainas-Birthday-074.jpg","Rainas-Birthday-075.jpg","Rainas-Birthday-076.jpg","Rainas-Birthday-077.jpg","Rainas-Birthday-078.jpg","Rainas-Birthday-079.jpg","Rainas-Birthday-080.jpg","Rainas-Birthday-081.jpg","Rainas-Birthday-082.jpg","Rainas-Birthday-083.jpg","Rainas-Birthday-084.jpg","Rainas-Birthday-085.jpg","Rainas-Birthday-086.jpg","Rainas-Birthday-087.jpg","Rainas-Birthday-088.jpg","Rainas-Birthday-089.jpg","Rainas-Birthday-090.jpg","Rainas-Birthday-091.jpg","Rainas-Birthday-092.jpg","Rainas-Birthday-093.jpg","Rainas-Birthday-094.jpg","Rainas-Birthday-095.jpg","Rainas-Birthday-096.jpg","Rainas-Birthday-097.jpg","Rainas-Birthday-098.jpg","Rainas-Birthday-099.jpg","Rainas-Birthday-100.jpg","Rainas-Birthday-101.jpg","Rainas-Birthday-102.jpg","Rainas-Birthday-103.jpg","Rainas-Birthday-104.jpg","Rainas-Birthday-105.jpg","Rainas-Birthday-106.jpg","Rainas-Birthday-107.jpg","Rainas-Birthday-108.jpg","Rainas-Birthday-109.jpg","Rainas-Birthday-110.jpg","Rainas-Birthday-111.jpg","Rainas-Birthday-112.jpg","Rainas-Birthday-113.jpg","Rainas-Birthday-114.jpg","Rainas-Birthday-115.jpg","Rainas-Birthday-116.jpg","Rainas-Birthday-117.jpg","Rainas-Birthday-118.jpg","Rainas-Birthday-119.jpg","Rainas-Birthday-120.jpg","Rainas-Birthday-121.jpg","Rainas-Birthday-122.jpg","Rainas-Birthday-123.jpg","Rainas-Birthday-124.jpg","Rainas-Birthday-125.jpg","Rainas-Birthday-126.jpg","Rainas-Birthday-127.jpg","Rainas-Birthday-128.jpg","Rainas-Birthday-129.jpg","Rainas-Birthday-130.jpg","Rainas-Birthday-131.jpg","Rainas-Birthday-132.jpg","Rainas-Birthday-133.jpg","Rainas-Birthday-134.jpg","Rainas-Birthday-135.jpg","Rainas-Birthday-136.jpg","Rainas-Birthday-137.jpg","Rainas-Birthday-138.jpg","Rainas-Birthday-139.jpg","Rainas-Birthday-140.jpg","Rainas-Birthday-141.jpg","Rainas-Birthday-142.jpg","Rainas-Birthday-143.jpg","Rainas-Birthday-144.jpg","Rainas-Birthday-145.jpg","Rainas-Birthday-146.jpg","Rainas-Birthday-147.jpg","Rainas-Birthday-148.jpg","Rainas-Birthday-149.jpg","Rainas-Birthday-150.jpg","Rainas-Birthday-151.jpg","Rainas-Birthday-152.jpg","Rainas-Birthday-153.jpg","Rainas-Birthday-154.jpg","Rainas-Birthday-155.jpg","Rainas-Birthday-156.jpg","Rainas-Birthday-157.jpg","Rainas-Birthday-158.jpg","Rainas-Birthday-159.jpg","Rainas-Birthday-160.jpg","Rainas-Birthday-161.jpg","Rainas-Birthday-162.jpg","Rainas-Birthday-163.jpg","Rainas-Birthday-164.jpg","Rainas-Birthday-165.jpg","Rainas-Birthday-166.jpg","Rainas-Birthday-167.jpg","Rainas-Birthday-168.jpg","Rainas-Birthday-169.jpg","Rainas-Birthday-170.jpg"];
+
+const selected = new Set();
+let lightboxIndex = 0;
+let allSelected = false;
+let touchStartX = 0;
+
+// Build grid
+const grid = document.getElementById('grid');
+photos.forEach((filename, i) => {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'photo-wrapper loading';
+  wrapper.dataset.index = i;
+  wrapper.innerHTML = `
+    <img src="photos/${filename}" alt="Photo ${i + 1}" loading="lazy" onload="this.parentElement.classList.remove('loading')">
+    <div class="checkmark">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <button class="expand-btn" onclick="event.stopPropagation(); openLightbox(${i})">
+      <svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+    </button>
+  `;
+  wrapper.addEventListener('click', () => toggleSelect(i));
+  grid.appendChild(wrapper);
+});
+
+function toggleSelect(index) {
+  if (selected.has(index)) {
+    selected.delete(index);
+  } else {
+    selected.add(index);
+  }
+  updateUI();
+}
+
+function toggleSelectAll() {
+  if (allSelected) {
+    selected.clear();
+  } else {
+    photos.forEach((_, i) => selected.add(i));
+  }
+  allSelected = !allSelected;
+  updateUI();
+}
+
+function updateUI() {
+  const wrappers = document.querySelectorAll('.photo-wrapper');
+  wrappers.forEach((w, i) => {
+    w.classList.toggle('selected', selected.has(i));
+  });
+
+  const bar = document.getElementById('bottomBar');
+  const label = document.getElementById('countLabel');
+  const selectBtn = document.getElementById('selectAllBtn');
+
+  if (selected.size > 0) {
+    bar.classList.add('visible');
+    label.textContent = `${selected.size} selected`;
+  } else {
+    bar.classList.remove('visible');
+  }
+
+  allSelected = selected.size === photos.length;
+  selectBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
+
+  // Update lightbox select button if open
+  updateLightboxSelectBtn();
+}
+
+// Lightbox
+function openLightbox(index) {
+  lightboxIndex = index;
+  const lb = document.getElementById('lightbox');
+  const img = document.getElementById('lightboxImg');
+  img.src = `photos/${photos[index]}`;
+  document.getElementById('lightboxCounter').textContent = `${index + 1} / ${photos.length}`;
+  lb.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  updateLightboxSelectBtn();
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function lightboxNav(dir) {
+  lightboxIndex = (lightboxIndex + dir + photos.length) % photos.length;
+  const img = document.getElementById('lightboxImg');
+  img.src = `photos/${photos[lightboxIndex]}`;
+  document.getElementById('lightboxCounter').textContent = `${lightboxIndex + 1} / ${photos.length}`;
+  updateLightboxSelectBtn();
+}
+
+function toggleLightboxSelect() {
+  toggleSelect(lightboxIndex);
+}
+
+function updateLightboxSelectBtn() {
+  const btn = document.getElementById('lightboxSelectBtn');
+  const label = document.getElementById('lightboxSelectLabel');
+  if (selected.has(lightboxIndex)) {
+    btn.classList.add('is-selected');
+    label.textContent = 'Selected';
+  } else {
+    btn.classList.remove('is-selected');
+    label.textContent = 'Select';
+  }
+}
+
+// Swipe support for lightbox
+const lightbox = document.getElementById('lightbox');
+lightbox.addEventListener('touchstart', (e) => {
+  touchStartX = e.touches[0].clientX;
+}, { passive: true });
+lightbox.addEventListener('touchend', (e) => {
+  const diff = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(diff) > 50) {
+    lightboxNav(diff > 0 ? -1 : 1);
+  }
+});
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+  if (!document.getElementById('lightbox').classList.contains('open')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft') lightboxNav(-1);
+  if (e.key === 'ArrowRight') lightboxNav(1);
+});
+
+// Download as zip
+async function downloadSelected() {
+  if (selected.size === 0) return;
+  const btn = document.getElementById('downloadBtn');
+  btn.disabled = true;
+  btn.innerHTML = `Zipping ${selected.size} photos...`;
+
+  try {
+    const zip = new JSZip();
+    const folder = zip.folder("rainas-first-birthday");
+    let done = 0;
+
+    const promises = [...selected].map(async (index) => {
+      const response = await fetch(`photos/${photos[index]}`);
+      const blob = await response.blob();
+      folder.file(photos[index], blob);
+      done++;
+      btn.innerHTML = `Zipping ${done}/${selected.size}...`;
+    });
+
+    await Promise.all(promises);
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(content);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'rainas-first-birthday-photos.zip';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Something went wrong creating the zip. Please try again.');
+    console.error(err);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download`;
+}
+</script>
+
+</body>
+</html>
