@@ -529,38 +529,47 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') lightboxNav(1);
 });
 
-// Download as zip
+// Download selected photos
 async function downloadSelected() {
   if (selected.size === 0) return;
   const btn = document.getElementById('downloadBtn');
   btn.disabled = true;
-  btn.innerHTML = `Zipping ${selected.size} photos...`;
 
   try {
-    const zip = new JSZip();
-    const folder = zip.folder("rainas-first-birthday");
+    // Fetch all selected photos as files
     let done = 0;
+    btn.innerHTML = `Loading ${selected.size} photos...`;
 
-    const promises = [...selected].map(async (index) => {
+    const files = await Promise.all([...selected].map(async (index) => {
       const response = await fetch(`photos/${photos[index]}`);
       const blob = await response.blob();
-      folder.file(photos[index], blob);
       done++;
-      btn.innerHTML = `Zipping ${done}/${selected.size}...`;
-    });
+      btn.innerHTML = `Loading ${done}/${selected.size}...`;
+      return new File([blob], photos[index], { type: 'image/jpeg' });
+    }));
 
-    await Promise.all(promises);
-
-    const content = await zip.generateAsync({ type: 'blob' });
-    const url = URL.createObjectURL(content);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'rainas-first-birthday-photos.zip';
-    a.click();
-    URL.revokeObjectURL(url);
+    // Try Web Share API (works on mobile — saves directly to Photos)
+    if (navigator.canShare && navigator.canShare({ files })) {
+      await navigator.share({ files });
+    } else {
+      // Fallback: zip download for desktop
+      btn.innerHTML = `Zipping ${files.length} photos...`;
+      const zip = new JSZip();
+      const folder = zip.folder("rainas-first-birthday");
+      files.forEach(f => folder.file(f.name, f));
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'rainas-first-birthday-photos.zip';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   } catch (err) {
-    alert('Something went wrong creating the zip. Please try again.');
-    console.error(err);
+    if (err.name !== 'AbortError') {
+      alert('Something went wrong. Please try again.');
+      console.error(err);
+    }
   }
 
   btn.disabled = false;
