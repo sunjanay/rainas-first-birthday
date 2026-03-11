@@ -548,8 +548,9 @@ async function downloadSelected() {
       return new File([blob], photos[index], { type: 'image/jpeg' });
     }));
 
-    // Try Web Share API (works on mobile — saves directly to Photos)
-    if (navigator.canShare && navigator.canShare({ files })) {
+    // Try Web Share API on mobile only — saves directly to Photos
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile && navigator.canShare && navigator.canShare({ files })) {
       await navigator.share({ files });
     } else {
       // Fallback: zip download for desktop
